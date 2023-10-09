@@ -32,7 +32,8 @@ mongoose.connect('mongodb://127.0.0.1:27017/userDB');
 const userSchema = new mongoose.Schema({
     email: String, 
     password: String,
-    googleId: String
+    googleId: String,
+    secret: String
 });
 
 // userSchema.plugin(passportLocalMongoose);
@@ -102,9 +103,22 @@ app.get('/auth/google/secrets',
 
 app.get("/secrets", function(req, res){
 
-    // console.log("came to secrets");
+    async function get_users_with_secrets(){
+
+        let foundUsers = await User.find({secret: {$exists: true}}).exec();
+        // console.log(foundUsers);
+
+        res.render("secrets", {UsersWithSecrets: foundUsers});
+        
+    }
+
+    get_users_with_secrets();
+
+});
+
+app.get("/submit", function(req, res){
     if(req.isAuthenticated()){
-        res.render("secrets");
+        res.render("submit");
     }
     else{
         res.redirect("/login");
@@ -118,7 +132,20 @@ app.get("/logout", function(req, res){
         else
             res.redirect("/");
     });
-})
+});
+
+app.post("/submit", function(req, res){
+
+    async function save_secret(){
+        this_user = await User.findOne({_id: req.user.id}).exec(); 
+
+        this_user.secret = req.body.secret;
+        this_user.save();
+        res.redirect("/secrets");
+    }
+
+    save_secret();
+});
 
 app.post("/register", function(req, res){
     User.register({username: req.body.username}, req.body.password, function(err, user){
